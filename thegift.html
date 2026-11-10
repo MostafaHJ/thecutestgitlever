@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A Little Gift For You</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{overflow:hidden;font-family:Georgia,'Times New Roman',serif;color:#fff;
+  background:radial-gradient(ellipse at 50% 100%,#4a2468 0%,transparent 60%),radial-gradient(ellipse at 50% 0%,#241a4d 0%,transparent 60%),linear-gradient(160deg,#0a0e24,#1a1236 55%,#0b0d22)}
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:1;touch-action:none}
+.page{display:none;position:fixed;inset:0;z-index:2;flex-direction:column;align-items:center;text-align:center;
+  padding:calc(env(safe-area-inset-top,0px) + 28px) 20px calc(env(safe-area-inset-bottom,0px) + 30px);pointer-events:none}
+.page.active{display:flex;animation:in .8s ease}
+@keyframes in{from{opacity:0}to{opacity:1}}
+#home{justify-content:space-between}
+#flower,#ring{justify-content:flex-end}
+h1{font-size:clamp(28px,5.4vw,46px);font-weight:normal;color:#ffe6f1;text-shadow:0 0 22px #e88bbd;margin-bottom:10px}
+.subtitle{color:#cdb9e2;letter-spacing:2px}
+.choices{position:relative;width:100%;height:54px}
+.choice{position:absolute;top:0;left:50%;transform:translateX(-50%);white-space:nowrap}
+.arrows{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;pointer-events:none}
+.arrows svg{width:clamp(44px,9vw,96px);height:auto;overflow:visible;filter:drop-shadow(0 0 6px #ff7fb8aa)}
+.arrows .mid{color:#ff9ec4;font-size:clamp(16px,3vw,26px);text-shadow:0 0 12px #ff7fb8;animation:beat 1.6s ease-in-out infinite}
+.arrows .a{animation:nudgeL 1.8s ease-in-out infinite}
+.arrows .b{animation:nudgeR 1.8s ease-in-out infinite}
+@keyframes nudgeL{50%{transform:translateX(-8px)}}
+@keyframes nudgeR{50%{transform:translateX(8px)}}
+@keyframes beat{50%{transform:scale(1.25)}}
+h2{font-size:clamp(22px,5.6vw,36px);font-weight:normal;font-style:italic;color:#ffe3ef;text-shadow:0 0 18px #ee8fbf;
+  opacity:0;animation:reveal 1.2s ease 1.1s forwards}
+@keyframes reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.hint{color:#a994c4;font-size:14px;margin-top:10px;letter-spacing:1px}
+button{pointer-events:auto;padding:14px 26px;border:1px solid #e2a9d0;border-radius:30px;color:#fff0f8;
+  background:linear-gradient(135deg,#7a4580,#3b2a58);font:inherit;font-size:16px;cursor:pointer;
+  box-shadow:0 0 18px #c06fb255;transition:transform .3s,box-shadow .3s}
+button:hover,button:focus-visible{transform:translateY(-3px);box-shadow:0 0 30px #e08fd0aa;outline:none}
+.back{margin-top:20px;padding:9px 22px;font-size:15px}
+@media(prefers-reduced-motion:reduce){.page.active,h2{animation:none;opacity:1}.arrows *{animation:none}}
+@media(max-width:560px){.long{display:none}button{padding:12px 16px;font-size:15px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<section class="page active" id="home">
+  <div><h1>A Little Gift For You</h1><p class="subtitle">Tap one to open ✨</p></div>
+  <div class="arrows" aria-hidden="true">
+    <svg class="a" viewBox="0 0 100 60" fill="none" stroke="#ffb3d3" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M94 40C72 6 36 4 12 28" stroke-dasharray="1 8"/><path d="M12 28l14-2.4M12 28l2.4-14"/></svg>
+    <span class="mid">♥</span>
+    <svg class="b" viewBox="0 0 100 60" fill="none" stroke="#ffb3d3" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 40C28 6 64 4 88 28" stroke-dasharray="1 8"/><path d="M88 28l-14-2.4M88 28l-2.4-14"/></svg>
+  </div>
+  <div class="choices">
+    <div class="choice" id="chF"><button onclick="showPage('flower')">🌸 <span class="long">Open the </span>Flower</button></div>
+    <div class="choice" id="chR"><button onclick="showPage('ring')">💍 <span class="long">Open the </span>Ring</button></div>
+  </div>
+</section>
+
+<section class="page" id="flower">
+  <h2>For The Cutest Girl Ever &lt;3</h2>
+  <p class="hint">drag to turn · tap to sparkle</p>
+  <button class="back" onclick="showPage('home')">← Back</button>
+</section>
+
+<section class="page" id="ring">
+  <h2>For The Cutest Girl Ever &lt;3</h2>
+  <p class="hint">drag to turn · tap to sparkle</p>
+  <button class="back" onclick="showPage('home')">← Back</button>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(40,1,.1,100);
+const C=h=>new THREE.Color(h);
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+// ---- studio reflections ----
+const pm=new THREE.PMREMGenerator(renderer);
+const es=new THREE.Scene();
+es.add(new THREE.Mesh(new THREE.SphereGeometry(30,32,16),new THREE.MeshBasicMaterial({color:0x3a2358,side:THREE.BackSide})));
+function panel(w,h,hex,k,x,y,z){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+  new THREE.MeshBasicMaterial({color:C(hex).multiplyScalar(k),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);es.add(m);}
+panel(16,16,0xffffff,4,0,18,2);panel(8,14,0xffe6c8,3,-14,3,8);panel(8,14,0xffb8dc,3.2,14,2,6);
+panel(12,6,0xdbe8ff,2.5,0,-4,16);panel(10,10,0xffffff,2,0,6,-16);
+scene.environment=pm.fromScene(es,.02).texture;
+scene.add(new THREE.AmbientLight(0xffffff,.45));
+const key=new THREE.DirectionalLight(0xfff1f6,1);key.position.set(3,6,6);scene.add(key);
+const rim=new THREE.DirectionalLight(0xc3a0ff,.8);rim.position.set(-5,2,-4);scene.add(rim);
+
+// ---- sprite textures (glow, star, heart) ----
+function mkTex(draw){const c=document.createElement('canvas');c.width=c.height=128;draw(c.getContext('2d'),128);return new THREE.CanvasTexture(c);}
+const T={
+  glow:mkTex((x,s)=>{const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.35,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,s,s);}),
+  star:mkTex((x,s)=>{x.translate(64,64);const g=x.createRadialGradient(0,0,0,0,0,64);g.addColorStop(0,'#fff');g.addColorStop(.3,'rgba(255,255,255,.45)');g.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=g;x.beginPath();for(let i=0;i<8;i++){const r=i%2?9:60,a=i*Math.PI/4-Math.PI/2;x.lineTo(Math.cos(a)*r,Math.sin(a)*r);}x.closePath();x.fill();
+    x.beginPath();x.arc(0,0,16,0,7);x.fill();}),
+  heart:mkTex((x,s)=>{x.translate(64,68);x.scale(3.4,3.4);x.fillStyle='#fff';x.beginPath();x.moveTo(0,10);
+    x.bezierCurveTo(-18,-2,-10,-16,0,-7);x.bezierCurveTo(10,-16,18,-2,0,10);x.fill();})
+};
+function spr(t,hex,size,op){const m=new THREE.SpriteMaterial({map:T[t],color:hex,transparent:true,opacity:op,depthWrite:false,blending:THREE.AdditiveBlending});
+  const s=new THREE.Sprite(m);s.scale.set(size,size,1);s.raycast=()=>{};return s;}
+
+// ---- lily ----
+function lilyTex(){
+  const w=256,h=512,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');
+  const img=x.createImageData(w,h),d=img.data;
+  const ss=(a,b,t)=>{t=Math.max(0,Math.min(1,(t-a)/(b-a)));return t*t*(3-2*t);};
+  const mix=(a,b,t)=>a+(b-a)*t;
+  for(let py=0;py<h;py++){const v=1-py/h;for(let px=0;px<w;px++){const u=px/w*2-1,e=Math.abs(u);
+    let r=1,g=.97,b=.98;
+    const k=(1-ss(.5,.98,e))*(1-.25*ss(.75,1,v));            // pink centre, white rim
+    r=mix(r,.94,k);g=mix(g,.42,k);b=mix(b,.65,k);
+    const st=Math.exp(-Math.pow(u/.14,2))*ss(.05,.5,v)*.55;   // deeper central stripe
+    r=mix(r,.82,st);g=mix(g,.14,st);b=mix(b,.38,st);
+    const th=(1-ss(.03,.24,v))*.85;                           // green-gold throat
+    r=mix(r,.78,th);g=mix(g,.9,th);b=mix(b,.42,th);
+    const i=(py*w+px)*4;d[i]=r*255;d[i+1]=g*255;d[i+2]=b*255;d[i+3]=255;}}
+  x.putImageData(img,0,0);
+  for(let n=0;n<75;n++){const u=(Math.random()-.5)*.95,v=.1+Math.random()*.5;
+    x.fillStyle='rgba(140,20,50,'+(.55+Math.random()*.4)+')';x.beginPath();
+    x.arc((u+1)/2*w,(1-v)*h,2+Math.random()*3.2,0,7);x.fill();}
+  const t=new THREE.CanvasTexture(cv);t.anisotropy=4;return t;}
+
+function petalGeo(L,W,curl,cup,pal){
+  const sU=20,sV=40,pos=[],col=[],uv=[],idx=[],c=new THREE.Color();
+  const sm=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+  for(let j=0;j<=sV;j++){const v=j/sV,w=W*Math.pow(Math.sin(Math.PI*Math.pow(v,.78)),.8);
+    for(let i=0;i<=sU;i++){const u=i/sU*2-1,e=Math.abs(u);
+      pos.push(u*w,v*L,-curl*L*v*v*v*.8+cup*w*u*u*(1-.4*v)+Math.sin(v*10+u*2)*.006*L*e*v);
+      uv.push((u+1)/2,v);
+      c.copy(pal.base).lerp(pal.mid,sm(v/.32)).lerp(pal.tip,sm((v-.25)/.75)*.85);
+      c.lerp(pal.edge,Math.pow(e,3)*.4);
+      if(e<.12)c.lerp(pal.vein,.3*(1-e/.12));
+      col.push(c.r,c.g,c.b);}}
+  for(let j=0;j<sV;j++)for(let i=0;i<sU;i++){const a=j*(sU+1)+i,b=a+1,d=a+sU+1,f=d+1;idx.push(a,b,d,b,f,d);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);g.computeVertexNormals();return g;}
+
+function makeLily(){
+  const spin=new THREE.Group(),bloom=new THREE.Group();
+  const tex=lilyTex(),W1=C(0xffffff);
+  const pal={base:W1,mid:W1,tip:W1,edge:W1,vein:W1};
+  const mat=new THREE.MeshPhysicalMaterial({map:tex,roughness:.55,side:THREE.DoubleSide,emissive:C(0x7a2048),emissiveIntensity:.12,
+    clearcoat:.12,clearcoatRoughness:.6,sheen:C(0xffd6e8)});
+  const og=petalGeo(2.1,.55,.7,.3,pal),ig=petalGeo(2.0,.68,.75,.32,pal);
+  for(let i=0;i<6;i++){const piv=new THREE.Group(),inn=i%2;piv.rotation.y=i*Math.PI/3;
+    const m=new THREE.Mesh(inn?ig:og,mat);m.rotation.x=-(inn?.95:1.05);m.position.y=inn?.03:0;piv.add(m);bloom.add(piv);}
+  const fm=new THREE.MeshStandardMaterial({color:0xf3f0d8,roughness:.5});
+  const am=new THREE.MeshStandardMaterial({color:0xb3122b,roughness:.45,emissive:0x5a0614,emissiveIntensity:.5});
+  for(let i=0;i<6;i++){const piv=new THREE.Group();piv.rotation.y=i*Math.PI/3+.5;
+    const t=new THREE.Group();t.rotation.x=-.3-.05*(i%2);
+    const f=new THREE.Mesh(new THREE.CylinderGeometry(.012,.016,1.3,8),fm);f.position.y=.65;
+    const a=new THREE.Mesh(new THREE.SphereGeometry(.06,14,12),am);a.scale.set(1,3.4,1);a.position.y=1.32;a.rotation.z=1.25;
+    t.add(f,a);piv.add(t);bloom.add(piv);}
+  const pist=new THREE.Group();pist.rotation.x=-.12;
+  const ps=new THREE.Mesh(new THREE.CylinderGeometry(.02,.026,1.6,8),new THREE.MeshStandardMaterial({color:0xdff0c8}));ps.position.y=.8;
+  const tip=new THREE.Mesh(new THREE.SphereGeometry(.08,14,12),new THREE.MeshStandardMaterial({color:0xd94a78,emissive:0x802050,emissiveIntensity:.4}));tip.position.y=1.62;
+  pist.add(ps,tip);bloom.add(pist);
+  const throat=spr('glow',0xffe9a0,1.0,.5);throat.position.set(0,.12,.15);bloom.add(throat);
+  bloom.rotation.x=.5;spin.add(bloom);
+  const curve=new THREE.CatmullRomCurve3([[0,-.1,-.07],[.04,-1.1,-.3],[.16,-2.2,-.25],[.04,-3.5,0]].map(p=>new THREE.Vector3(...p)));
+  const sg=new THREE.TubeGeometry(curve,60,.07,16,false);
+  {const pa=sg.attributes.position,rs=17,N=60;for(let i=0;i<=N;i++){const P=curve.getPointAt(i/N),f=.7+.6*(i/N);
+    for(let j=0;j<rs;j++){const k=i*rs+j;pa.setXYZ(k,P.x+(pa.getX(k)-P.x)*f,P.y+(pa.getY(k)-P.y)*f,P.z+(pa.getZ(k)-P.z)*f);}}
+    pa.needsUpdate=true;sg.computeVertexNormals();}
+  spin.add(new THREE.Mesh(sg,new THREE.MeshStandardMaterial({color:0x6cc48c,roughness:.6,emissive:0x1d4a30,emissiveIntensity:.25})));
+  const lp={base:C(0x3d9a5e),mid:C(0x6fcf8c),tip:C(0xa6e8b0),edge:C(0x4aa56a),vein:C(0xd2f5d2)};
+  const lg=petalGeo(1.6,.34,.5,.14,lp),lm=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.5,side:THREE.DoubleSide});
+  [[.55,1],[.78,-1]].forEach(([p,s])=>{const g=new THREE.Group();g.position.copy(curve.getPoint(p));g.rotation.y=s*Math.PI/2;
+    const l=new THREE.Mesh(lg,lm);l.rotation.x=-1.1;g.add(l);spin.add(g);});
+  const holder=new THREE.Group();holder.add(spin);
+  const halo=spr('glow',0x8a6cff,6.5,.45);halo.position.set(0,.9,-1);holder.add(halo);
+  return {holder,spin,halo,twinkle:null,yaw:0,vel:0,pulse:0,ph:0,detailY:.8,homeY:.5};}
+
+// ---- ring ----
+function makeRing(){
+  const spin=new THREE.Group(),r=new THREE.Group();
+  const gold=new THREE.MeshStandardMaterial({color:0xf2b29c,metalness:1,roughness:.18,envMapIntensity:1.3});
+  const stoneM=new THREE.MeshStandardMaterial({color:0xffffff,metalness:.9,roughness:.05,envMapIntensity:3,emissive:0xbfd8ff,emissiveIntensity:.25});
+  const pinkM=new THREE.MeshStandardMaterial({color:0xff7db5,metalness:.4,roughness:.08,flatShading:true,envMapIntensity:2.4,emissive:0xff3f8e,emissiveIntensity:.35});
+  const R=1.25,tb=.085;
+  const band=new THREE.Mesh(new THREE.TorusGeometry(R,tb,32,160),gold);band.scale.z=1.5;r.add(band);
+  const sg=new THREE.SphereGeometry(1,12,10);
+  for(const sd of [-1,1])for(let k=0;k<10;k++){const a=.42+k*.085,rad=.05-k*.002;
+    const m=new THREE.Mesh(sg,stoneM);m.scale.setScalar(rad);
+    m.position.set(sd*Math.sin(a)*(R+tb),Math.cos(a)*(R+tb)+.005,0);r.add(m);}
+  const hs=new THREE.Shape();hs.moveTo(0,-.5);hs.bezierCurveTo(-.9,.1,-.5,.8,0,.35);hs.bezierCurveTo(.5,.8,.9,.1,0,-.5);
+  const mk=(depth,bt,bs,seg)=>{const g=new THREE.ExtrudeGeometry(hs,{depth,bevelEnabled:bt>0,bevelThickness:bt,bevelSize:bs,bevelSegments:seg,curveSegments:16});g.center();return g;};
+  const crown=new THREE.Group();crown.position.y=R+tb;r.add(crown);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,.14,24),gold);neck.position.y=.04;crown.add(neck);
+  const plate=new THREE.Mesh(mk(.05,0,0,1),gold);plate.rotation.x=-Math.PI/2;plate.scale.setScalar(.93);plate.position.y=.04;crown.add(plate);
+  const pts=hs.getSpacedPoints(30);
+  const x0=Math.min(...pts.map(p=>p.x)),x1=Math.max(...pts.map(p=>p.x)),y0=Math.min(...pts.map(p=>p.y)),y1=Math.max(...pts.map(p=>p.y));
+  const cx=(x0+x1)/2,cy=(y0+y1)/2;
+  pts.slice(0,-1).forEach(p=>{const m=new THREE.Mesh(sg,stoneM);m.scale.setScalar(.05);
+    m.position.set((p.x-cx)*.82,.1,-(p.y-cy)*.82);crown.add(m);});
+  const stone=new THREE.Mesh(mk(.06,.08,.06,3),pinkM);stone.rotation.x=-Math.PI/2;stone.scale.setScalar(.62);stone.position.y=.15;crown.add(stone);
+  const gl=spr('glow',0xb48cff,2.6,.5);gl.position.set(0,.45,0);crown.add(gl);
+  const tw=spr('star',0xffffff,.9,.9);tw.position.set(.3,.35,-.3);crown.add(tw);
+  const orb=[[-.7,.3,-.2],[.75,.28,.1],[0,.55,-.5],[-.45,.25,.55],[.5,.5,-.45]].map(p=>{const o=spr('star',0xffe8f4,.22,.8);o.position.set(...p);crown.add(o);return o;});
+  r.scale.setScalar(1.25);r.rotation.x=1.05;r.position.y=-.1;spin.add(r);
+  const holder=new THREE.Group();holder.add(spin);
+  const halo=spr('glow',0x8a6cff,5.6,.4);halo.position.set(0,.4,-1);holder.add(halo);
+  return {holder,spin,halo,gl,orb,twinkle:tw,yaw:.5,vel:0,pulse:0,ph:2,detailY:.5,homeY:0};}
+
+const models={flower:makeLily(),ring:makeRing()};
+Object.values(models).forEach(m=>scene.add(m.holder));
+
+// ---- ambient sparkles + hearts ----
+const amb=[],bursts=[];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+for(let i=0;i<60;i++){const s=spr('star',pick([0xfff2b0,0xffffff,0xffd1e8,0xd7c2ff]),.14+Math.random()*.2,0);
+  s.position.set((Math.random()-.5)*12,(Math.random()-.5)*7,-2+Math.random()*3);scene.add(s);amb.push({s,k:'s',ph:Math.random()*6.3,sp:.8+Math.random()*1.6});}
+for(let i=0;i<22;i++){const s=spr('heart',pick([0xff9ec4,0xffc4de,0xcdb2ff]),.28+Math.random()*.2,0);
+  s.position.set((Math.random()-.5)*10,-3.5+Math.random()*7,-1.5+Math.random());scene.add(s);amb.push({s,k:'h',ph:Math.random()*6.3,vy:.22+Math.random()*.25,x0:s.position.x});}
+function burst(p){for(let i=0;i<18;i++){const h=i%3!==0,s=spr(h?'heart':'star',pick([0xff8fb8,0xffc2dc,0xd7b6ff,0xfff2b0]),h?.34:.45,1);
+  s.position.copy(p);scene.add(s);const a=Math.random()*6.28,sp=.8+Math.random()*1.6;
+  bursts.push({s,vx:Math.cos(a)*sp,vy:Math.abs(Math.sin(a))*sp+.5,vz:Math.random()*.6,life:0,max:1.4+Math.random()*.9});}}
+
+// ---- state + interaction ----
+let page='home',hover=null,drag=false,moved=0,lastX=0,sx=0,sy=0;
+const clock=new THREE.Clock(),ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+function showPage(id){page=id;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');hover=null;}
+function hit(e){const r=canvas.getBoundingClientRect();mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(mouse,camera);
+  for(const k in models){if(page!=='home'&&k!==page)continue;const h=ray.intersectObject(models[k].holder,true);if(h.length)return{k,p:h[0].point};}
+  return null;}
+canvas.addEventListener('pointerdown',e=>{drag=true;moved=0;lastX=sx=e.clientX;sy=e.clientY;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{
+  if(drag){const dx=e.clientX-lastX;moved+=Math.abs(dx)+Math.abs(e.clientY-sy)*0;lastX=e.clientX;
+    if(page!=='home'){const m=models[page];m.vel=dx*.008;m.yaw+=m.vel;}}
+  else{const h=hit(e);hover=page==='home'&&h?h.k:null;canvas.style.cursor=h?'pointer':'default';}});
+function up(e){if(!drag)return;drag=false;if(moved>6)return;const h=hit(e);if(!h)return;
+  if(page==='home')showPage(h.k);else{models[h.k].pulse=1;burst(h.p);}}
+canvas.addEventListener('pointerup',up);
+canvas.addEventListener('pointercancel',()=>drag=false);
+addEventListener('keydown',e=>{if(e.key==='Escape')showPage('home');});
+
+let portrait=false;
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);portrait=w/h<.8;
+  camera.aspect=w/h;camera.position.set(0,.8,portrait?12.5:9.2);camera.lookAt(0,0,0);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);placeChoices();}
+function placeChoices(){[['chF',-1],['chR',1]].forEach(([id,sg])=>{const v=new THREE.Vector3(sg*(portrait?1.3:2.6),0,0).project(camera);
+  document.getElementById(id).style.left=((v.x*.5+.5)*innerWidth)+'px';});}
+addEventListener('resize',resize);resize();
+
+const tgt=new THREE.Vector3();
+(function loop(){
+  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime,f=1-Math.exp(-6*dt);
+  for(const k in models){const m=models[k],sel=page===k,other=page!=='home'&&!sel;
+    const homeS=portrait?.4:.62,detS=portrait?.9:.85;
+    let s=other?0:sel?detS*(1+.07*m.pulse):homeS*(hover===k?1.14:1);
+    const x=sel||other?0:(k==='flower'?-1:1)*(portrait?1.3:2.6);
+    m.fl=(m.fl||0)+((sel?1:0)-(m.fl||0))*f;
+    const y=(sel?m.detailY:m.homeY*(portrait?.8:1))+(reduce?0:m.fl*(Math.sin(t*.8+m.ph)*.26+Math.sin(t*1.9+m.ph*2)*.07));
+    tgt.set(x+(reduce?0:m.fl*(Math.sin(t*.55+m.ph)*.22+Math.sin(t*1.3+m.ph)*.05)),y,reduce?0:m.fl*Math.sin(t*.45+m.ph)*.35);m.holder.position.lerp(tgt,f);
+    const ns=m.holder.scale.x+(s-m.holder.scale.x)*f;m.holder.scale.setScalar(Math.max(ns,.0001));m.holder.visible=ns>.03;
+    if(!reduce){m.holder.rotation.z=m.fl*(Math.sin(t*.7+m.ph)*.1+Math.sin(t*1.6+m.ph)*.025);m.holder.rotation.x=m.fl*Math.sin(t*.6+m.ph+1)*.07;}
+    if(!(drag&&sel)){m.vel*=.95;m.yaw+=m.vel+(reduce?0:(sel?.007:.004));}
+    m.spin.rotation.y=m.yaw;m.pulse*=.93;
+    m.halo.material.opacity=(.42)*(.85+.15*Math.sin(t*2+m.ph))+(hover===k?.15:0)+m.pulse*.25;
+    if(m.gl)m.gl.material.opacity=.5+.2*Math.sin(t*2.4)+m.pulse*.4;
+    if(m.orb)m.orb.forEach((o,i)=>{const q=.12+.2*Math.abs(Math.sin(t*2.2+i*1.7));o.scale.set(q,q,1);o.material.opacity=.4+.5*Math.abs(Math.sin(t*2.2+i*1.7));});
+    if(m.twinkle){const q=.75+.35*Math.sin(t*3.2);m.twinkle.scale.set(q,q,1);m.twinkle.material.opacity=.55+.4*Math.sin(t*3.2);}}
+  amb.forEach(a=>{if(a.k==='s')a.s.material.opacity=.7*Math.max(0,Math.sin(t*a.sp+a.ph));
+    else{if(!reduce)a.s.position.y+=a.vy*dt;if(a.s.position.y>3.8)a.s.position.y=-3.8;
+      a.s.position.x=a.x0+Math.sin(t*.6+a.ph)*.3;const yy=a.s.position.y;a.s.material.opacity=.55*Math.max(0,1-Math.abs(yy)/3.8);}});
+  for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];b.life+=dt;b.vy*=.985;
+    b.s.position.x+=b.vx*dt;b.s.position.y+=b.vy*dt;b.s.position.z+=b.vz*dt;
+    b.s.material.opacity=Math.max(0,1-b.life/b.max);
+    if(b.life>=b.max){scene.remove(b.s);b.s.material.dispose();bursts.splice(i,1);}}
+  renderer.render(scene,camera);requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
